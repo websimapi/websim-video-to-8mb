@@ -13,7 +13,8 @@ const els = {
   result: document.getElementById('result'),
   outVideo: document.getElementById('outVideo'),
   outInfo: document.getElementById('outInfo'),
-  dl: document.getElementById('downloadLink')
+  dl: document.getElementById('downloadLink'),
+  parts: document.getElementById('parts')
 };
 let ffmpeg, file, duration = 0, srcDims = { w: 0, h: 0 };
 
@@ -75,12 +76,14 @@ const chooseScale = (bitrateKbps) => {
   return target;
 };
 
-const buildArgs = ({ vBitrateK, aBitrateK, speed, scale }) => {
+const buildArgs = ({ vBitrateK, aBitrateK, speed, scale, ss, t, outName = 'out.webm' }) => {
   const maxrateK = Math.round(vBitrateK * 1.5);
   const bufsizeK = Math.round(vBitrateK * 2.0);
   const speedMap = { speed: '6', balanced: '4', quality: '2' };
   return [
     '-i', 'input',
+    ...(ss != null ? ['-ss', String(ss)] : []),
+    ...(t != null ? ['-t', String(t)] : []),
     '-c:v', 'libvpx-vp9',
     '-b:v', `${vBitrateK}k`,
     '-maxrate', `${maxrateK}k`,
@@ -94,18 +97,17 @@ const buildArgs = ({ vBitrateK, aBitrateK, speed, scale }) => {
     '-c:a', 'libopus',
     '-b:a', `${aBitrateK}k`,
     '-movflags', '+faststart',
-    '-y', 'out.webm'
+    '-y', outName
   ];
 };
 
-const encodeOnce = async (vBitrateK, aBitrateK, speed, scale) => {
+const encodeOnce = async (vBitrateK, aBitrateK, speed, scale, ss = null, t = null, outName = 'out.webm') => {
   const ff = await initFFmpeg();
   await ff.writeFile('input', await fetchFile(file));
-  const args = buildArgs({ vBitrateK, aBitrateK, speed, scale });
+  const args = buildArgs({ vBitrateK, aBitrateK, speed, scale, ss, t, outName });
   await ff.exec(args);
-  const data = await ff.readFile('out.webm');
-  await ff.deleteFile('input');
-  await ff.deleteFile('out.webm');
+  const data = await ff.readFile(outName);
+  await ff.deleteFile('input'); await ff.deleteFile(outName);
   return new Blob([data], { type: 'video/webm' });
 };
 
@@ -147,7 +149,32 @@ els.btn.addEventListener('click', async () => {
 
     if (!outBlob) throw new Error('Encoding failed');
 
-    // Show result
+    // If too big, split into multiple parts targeting <= target size
+    if (outBlob.size > targetBytes && duration > 0) {
+      const parts = Math.max(2, Math.ceil(outBlob.size / targetBytes));
+      const seg = Math.max(2, Math.floor(duration / parts));
+      const blobs = [];
+      els.parts.innerHTML = ''; els.parts.classList.remove('hidden');
+      for (let i = 0; i < parts; i++) {
+        const start = i * seg;
+        const durSeg = i === parts - 1 ? Math.max(1, Math.ceil(duration - start)) : seg;
+        els.pText.textContent = `Encoding part ${i + 1}/${parts}…`;
+        const b = await encodeOnce(vBitrateK, audioK, speed, scale, Math.floor(start), Math.floor(durSeg), `out_${i + 1}.webm`);
+        blobs.push(b);
+        const url = URL.createObjectURL(b);
+        const a = document.createElement('a');
+        a.href = url; a.download = `part${i + 1}.webm`; a.textContent = `Part ${i + 1}`;
+        const size = document.createElement('span'); size.textContent = `${(b.size/1024/1024).toFixed(2)} MB`;
+        a.appendChild(size); els.parts.appendChild(a);
+        if (i === 0) { els.outVideo.src = url; els.dl.href = url; els.dl.download = a.download; }
+      }
+      els.outInfo.textContent = `Split into ${blobs.length} parts • VP9/Opus • ${scale.w}×${scale.h}`;
+      els.result.classList.remove('hidden'); els.pText.textContent = 'Done'; els.pPct.textContent = '100%'; els.pBar.style.width = '100%';
+      return;
+    }
+
+    // Show single-file result
+    els.parts.classList.add('hidden'); els.parts.innerHTML = '';
     const url = URL.createObjectURL(outBlob);
     els.outVideo.src = url;
     els.dl.href = url;
