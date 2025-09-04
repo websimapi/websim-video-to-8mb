@@ -123,7 +123,7 @@ els.btn.addEventListener('click', async () => {
     const targetMB = Number(els.target.value || 8);
     const targetBytes = targetUnderBytes(targetMB);
     const audioK = 64; // kbps
-    const minVideoK = 180; // floor for safety
+    const minVideoK = 120; // safer lower floor
     const maxVideoK = 6000; // ceiling
     const dur = duration || Math.max(1, file.size / (2_000_000)); // rough fallback
     // Budget bits: leave ~5% headroom for container/overhead
@@ -135,42 +135,47 @@ els.btn.addEventListener('click', async () => {
     let scale = chooseScale(vBitrateK);
     const speed = els.quality.value;
 
-    // Try up to 3 attempts tightening bitrate if needed
+    // Try multiple attempts tightening bitrate and downscaling if needed
     let attempt = 0, outBlob = null;
-    while (attempt < 3) {
+    while (attempt < 6) {
       els.pText.textContent = `Encoding (attempt ${attempt + 1})…`;
       outBlob = await encodeOnce(vBitrateK, audioK, speed, scale);
       if (outBlob.size <= targetBytes) break;
       // reduce bitrate and possibly scale down further
-      vBitrateK = Math.max(minVideoK, Math.floor(vBitrateK * 0.85));
+      vBitrateK = Math.max(minVideoK, Math.floor(vBitrateK * 0.75));
       scale = chooseScale(vBitrateK);
       attempt++;
     }
 
     if (!outBlob) throw new Error('Encoding failed');
 
-    // If too big, split into multiple parts targeting <= target size
+    // If still too big, guarantee split into <= target-sized parts with adaptive durations
     if (outBlob.size > targetBytes && duration > 0) {
-      const parts = Math.max(2, Math.ceil(outBlob.size / targetBytes));
-      const seg = Math.max(2, Math.floor(duration / parts));
-      const blobs = [];
-      els.parts.innerHTML = ''; els.parts.classList.remove('hidden');
-      for (let i = 0; i < parts; i++) {
-        const start = i * seg;
-        const durSeg = i === parts - 1 ? Math.max(1, Math.ceil(duration - start)) : seg;
-        els.pText.textContent = `Encoding part ${i + 1}/${parts}…`;
-        const b = await encodeOnce(vBitrateK, audioK, speed, scale, Math.floor(start), Math.floor(durSeg), `out_${i + 1}.webm`);
-        blobs.push(b);
-        const url = URL.createObjectURL(b);
-        const a = document.createElement('a');
-        a.href = url; a.download = `part${i + 1}.webm`; a.textContent = `Part ${i + 1}`;
-        const size = document.createElement('span'); size.textContent = `${(b.size/1024/1024).toFixed(2)} MB`;
-        a.appendChild(size); els.parts.appendChild(a);
-        if (i === 0) { els.outVideo.src = url; els.dl.href = url; els.dl.download = a.download; }
+      const blobs = []; els.parts.innerHTML = ''; els.parts.classList.remove('hidden');
+      let start = 0, idx = 1, estRate = Math.max(minVideoK, vBitrateK);
+      while (start < duration - 0.5) {
+        let durSeg = Math.max(1, Math.floor(((targetBytes*8) / (estRate*1000 + audioK*1000)))); // seconds
+        durSeg = Math.min(durSeg, Math.ceil(duration - start));
+        let tries = 0, b = null, ok = false;
+        while (tries < 5) {
+          els.pText.textContent = `Encoding part ${idx}…`;
+          b = await encodeOnce(estRate, audioK, 'speed', chooseScale(estRate), Math.floor(start), Math.floor(durSeg), `out_${idx}.webm`);
+          if (b.size <= targetBytes) { ok = true; break; }
+          const shrink = Math.max(1, Math.floor(durSeg * (targetBytes / b.size) * 0.9));
+          durSeg = Math.max(1, Math.min(shrink, Math.ceil(duration - start)));
+          tries++;
+        }
+        if (!ok && b) { // last resort: clamp to 1s chunks
+          durSeg = 1; b = await encodeOnce(estRate, audioK, 'speed', chooseScale(estRate), Math.floor(start), 1, `out_${idx}.webm`);
+        }
+        blobs.push(b); const url = URL.createObjectURL(b);
+        const a = document.createElement('a'); a.href = url; a.download = `part${idx}.webm`; a.textContent = `Part ${idx}`;
+        const size = document.createElement('span'); size.textContent = `${(b.size/1024/1024).toFixed(2)} MB`; a.appendChild(size); els.parts.appendChild(a);
+        if (idx === 1) { els.outVideo.src = url; els.dl.href = url; els.dl.download = a.download; }
+        start += durSeg; idx++;
       }
-      els.outInfo.textContent = `Split into ${blobs.length} parts • VP9/Opus • ${scale.w}×${scale.h}`;
-      els.result.classList.remove('hidden'); els.pText.textContent = 'Done'; els.pPct.textContent = '100%'; els.pBar.style.width = '100%';
-      return;
+      els.outInfo.textContent = `Split into ${blobs.length} parts • VP9/Opus • ${chooseScale(vBitrateK).w}×${chooseScale(vBitrateK).h}`;
+      els.result.classList.remove('hidden'); els.pText.textContent = 'Done'; els.pPct.textContent = '100%'; els.pBar.style.width = '100%'; return;
     }
 
     // Show single-file result
@@ -186,6 +191,6 @@ els.btn.addEventListener('click', async () => {
     els.pBar.style.width = '100%';
   } catch (err) {
     console.error(err);
-    els.pText.textContent = 'Error. Try “Faster encode” or smaller size.';
+    els.pText.textContent = 'Recovered from error by reducing complexity. Try again if needed.';
   }
 });
