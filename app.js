@@ -83,7 +83,7 @@ const buildArgs = ({ vBitrateK, aBitrateK, speed, scale }) => {
     '-i', 'input',
     '-c:v', 'libvpx-vp9',
     '-b:v', `${vBitrateK}k`,
-    '-maxrate', `${maxrateK}k',
+    '-maxrate', `${maxrateK}k`,
     '-bufsize', `${bufsizeK}k`,
     '-row-mt', '1',
     '-tile-columns', '1',
@@ -162,5 +162,3 @@ els.btn.addEventListener('click', async () => {
     els.pText.textContent = 'Error. Try “Faster encode” or smaller size.';
   }
 });
-/* ...existing code... */
-
