@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- ...existing content... -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Video to 8MB</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "@ffmpeg/ffmpeg": "https://esm.sh/@ffmpeg/ffmpeg@0.12.9",
+      "@ffmpeg/util": "https://esm.sh/@ffmpeg/util@0.12.2"
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- ...existing content... -->
+  <main class="wrap">
+    <header class="header">
+      <h1>Shrink your video to 8 MB</h1>
+      <p class="sub">Works fully in your browser. No upload.</p>
+    </header>
+
+    <section class="card">
+      <label class="fileLabel">
+        <input id="fileInput" type="file" accept="video/*">
+        <span>Select a video</span>
+      </label>
+
+      <div class="row">
+        <label class="field">
+          <span>Target size</span>
+          <div class="fieldInline">
+            <input id="targetSize" type="number" value="8" min="1" step="1" inputmode="numeric">
+            <span class="suffix">MB</span>
+          </div>
+        </label>
+
+        <label class="field">
+          <span>Quality mode</span>
+          <select id="quality">
+            <option value="balanced" selected>Balanced</option>
+            <option value="speed">Faster encode</option>
+            <option value="quality">Higher quality</option>
+          </select>
+        </label>
+      </div>
+
+      <button id="encodeBtn" class="primary" disabled>Encode to target</button>
+
+      <div id="progressWrap" class="progressWrap hidden">
+        <div class="progressBar"><div id="progressBar" class="bar"></div></div>
+        <div class="progressText">
+          <span id="status">Waiting…</span>
+          <span id="percent">0%</span>
+        </div>
+      </div>
+
+      <div id="result" class="result hidden">
+        <video id="outVideo" controls playsinline></video>
+        <div class="meta">
+          <span id="outInfo"></span>
+          <a id="downloadLink" class="secondary" download="output.webm">Download</a>
+        </div>
+      </div>
+
+      <details class="tips">
+        <summary>Tips if it won’t fit</summary>
+        <ul>
+          <li>Try “Faster encode” first for mobile devices.</li>
+          <li>Very long videos may need a smaller target size or will auto downscale.</li>
+        </ul>
+      </details>
+    </section>
+
+    <footer class="foot">VP9 + Opus in WebM. All processing is local.</footer>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
+

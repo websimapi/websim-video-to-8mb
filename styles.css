@@ -1,0 +1,25 @@
+/* ...existing styles... */
+:root { --bg:#fff; --fg:#0e0f10; --muted:#6b7280; --line:#e5e7eb; --accent:#111; --radius:14px; }
+*{box-sizing:border-box} body{margin:0;font-family:"Noto Sans",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--fg)}
+.wrap{max-width:720px;margin:0 auto;padding:20px}
+.header h1{font-size:1.8rem;margin:8px 0 4px} .sub{color:var(--muted);margin:0 0 16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.04)}
+.fileLabel{display:block;border:1.5px dashed var(--line);border-radius:12px;padding:14px;text-align:center;cursor:pointer}
+.fileLabel input{display:none} .fileLabel span{font-weight:600}
+.row{display:flex;gap:12px;margin:14px 0;flex-wrap:wrap}
+.field{flex:1;display:flex;flex-direction:column;gap:6px}
+.fieldInline{display:flex;align-items:center;gap:8px}
+input[type=number], select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:#fff}
+button.primary{width:100%;padding:14px 16px;border:none;border-radius:12px;background:var(--accent);color:#fff;font-weight:700;font-size:16px}
+button.primary:disabled{opacity:.4}
+.secondary{display:inline-block;padding:10px 12px;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--fg)}
+.progressWrap{margin:14px 0}
+.progressBar{height:10px;background:#f3f4f6;border-radius:999px;overflow:hidden}
+.progressBar .bar{height:100%;width:0;background:#111;transition:width .25s ease}
+.progressText{display:flex;justify-content:space-between;margin-top:8px;color:var(--muted);font-size:14px}
+.result video{width:100%;max-height:50vh;border-radius:12px;border:1px solid var(--line);background:#000}
+.result .meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:8px;flex-wrap:wrap}
+.tips{margin-top:8px;color:var(--muted)} .foot{margin:18px 0;color:var(--muted);font-size:13px;text-align:center}
+.hidden{display:none}
+/* ...existing styles... */
+
